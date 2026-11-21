@@ -2,7 +2,7 @@
 
 把时间留给阅读。
 
-一个为 Windows、MacBook、iPhone 和 iPad 设计的文档阅读 Web App。打开文件即可阅读；简洁的纸张界面搭配适合长文的排版。
+一个为 Windows、MacBook、iPhone 和 iPad 设计的文档阅读 Web App。打开文件即可阅读，也能新建和编辑文档；简洁的纸张界面搭配适合长文的排版。
 
 **在线使用：** [docreader.fkonline.workers.dev](https://docreader.fkonline.workers.dev)
 
@@ -16,6 +16,15 @@
 - 文档目录、文内搜索、阅读进度与阅读样式设置。
 - 文档与阅读记录保存在当前设备的浏览器中；各台设备分别管理自己的书架。
 - 首次联网打开并完成缓存后，可离线使用阅读器和已导入的文档。
+
+## 新建、编辑与书架
+
+- 点击「新建文档」创建空白 Markdown 或 TXT，填写名称后直接开始写。
+- 点击工具栏的「编辑」修改文本类文档；Markdown 提供标题、加粗、列表、引用、代码和链接快捷按钮。
+- 修改会自动保存到当前设备；也可点击「保存」或按 `Ctrl / ⌘ + S`。「查看排版」会保存并回到阅读视图。
+- DOCX 可以创建可编辑的 TXT 副本，原 DOCX 继续保留。
+- 「下载文档」导出当前保存的版本。导入到书架后的修改不会直接改写设备上的源文件。
+- 书架支持收起与展开，并记住状态；每份文档右侧的移除按钮可直接将其移出书架，并提供短暂的撤销入口。
 
 ## 安装为 App
 
@@ -65,3 +74,12 @@ npm run deploy
 ## 技术
 
 React、Vite、Cloudflare Workers Static Assets、IndexedDB、Markdown-it、KaTeX、Highlight.js 与 PWA。文档解析在浏览器内完成。
+
+## 自动发布版本快照
+
+每次推送到 `main`，GitHub Actions 的 **Publish release snapshot** 都会执行生产构建，成功后自动发布一个新的 [GitHub Release](https://github.com/fsfrank9/DocReader/releases)。Cloudflare 继续独立负责网页部署。
+
+- 标签采用 `snapshot-提交日期时间-短提交号`，固定指向本次构建的提交；日期时间使用 UTC。
+- 每个版本附带构建好的 `leaf-web-*.zip`、`SHA256SUMS` 和 GitHub 自动提供的源码压缩包。网页压缩包可部署到静态网站服务的根目录。
+- 同一个提交重复运行会复用已有快照。也可以在 Actions 页面手动运行该工作流。
+- 快照保存应用代码与网页构建产物；书架文档继续保存在各设备的浏览器中。

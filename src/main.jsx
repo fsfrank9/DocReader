@@ -4,6 +4,8 @@ import { registerSW } from 'virtual:pwa-register';
 import { App } from './App.jsx';
 import 'katex/dist/katex.min.css';
 import './styles.css';
+import './sidebar.css';
+import './editor.css';
 
 createRoot(document.getElementById('root')).render(<App />);
 

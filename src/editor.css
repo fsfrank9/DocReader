@@ -1,0 +1,74 @@
+.document-editor { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--paper); }
+.editor-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px 28px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.editor-file { display: flex; align-items: center; min-width: 0; flex: 1; gap: 12px; }
+.editor-filename { color: var(--text); background: transparent; border: 0; border-bottom: 1px solid transparent; border-radius: 0; padding: 6px 0; min-width: 0; width: 100%; font-size: 16px; text-overflow: ellipsis; }
+.editor-filename:hover { border-color: var(--line); }
+.editor-filename:focus { border-color: var(--accent); outline: none; }
+.editor-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.editor-save-status { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; white-space: nowrap; margin-right: 6px; }
+.editor-save-status.status-error { color: var(--accent); }
+.editor-save, .editor-read { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 37px; padding: 8px 12px; border-radius: 7px; font-size: 12px; white-space: nowrap; }
+.editor-save { color: var(--secondary); border: 1px solid var(--line); }
+.editor-save:hover { background: var(--subtle); color: var(--text); }
+.editor-read { background: var(--accent); color: #fffaf5; }
+.editor-read:hover { background: var(--accent-hover); }
+[data-theme='dark'] .editor-read { color: #231e1a; }
+.editor-formatting { display: flex; align-items: center; gap: 5px; padding: 8px 26px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.editor-format-button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 34px; padding: 0; border-radius: 6px; color: var(--secondary); }
+.editor-format-button:hover { color: var(--accent); background: var(--accent-wash); }
+.editor-format-hint { margin-left: auto; font: 11px Georgia, serif; color: var(--muted); letter-spacing: .04em; }
+.editor-textarea { display: block; flex: 1; width: 100%; min-height: 0; resize: none; padding: 38px max(32px, calc((100% - 920px) / 2)) 60px; border: 0; background: transparent; color: var(--text); font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', 'Noto Sans Mono CJK SC', monospace; font-size: 16px; line-height: 1.95; tab-size: 4; letter-spacing: .01em; outline: none; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.editor-textarea::placeholder { color: var(--muted); opacity: .75; }
+.editor-textarea:focus-visible { outline: none; }
+.editor-footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 10px 28px max(14px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; flex-shrink: 0; }
+.editor-footer-dot { margin-inline: 9px; }
+.editor-error { padding: 10px 28px; font-size: 12px; line-height: 1.7; color: var(--accent); background: var(--accent-wash); flex-shrink: 0; }
+.editor-spinner { animation: editor-spin 1s linear infinite; }
+@keyframes editor-spin { to { transform: rotate(360deg); } }
+
+.new-document-dialog { width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); border: 1px solid var(--line); border-radius: 17px; padding: 27px 30px 28px; background: var(--surface); color: var(--text); box-shadow: 0 24px 80px #211b1730; overflow-y: auto; }
+.new-document-dialog::backdrop { background: #211b174d; backdrop-filter: blur(4px); }
+.new-document-heading { display: flex; justify-content: space-between; align-items: center; }
+.new-document-symbol { width: 43px; height: 43px; display: flex; align-items: center; justify-content: center; color: var(--accent); border-radius: 11px; background: var(--accent-wash); }
+.new-document-dialog h2 { font-family: var(--serif); font-size: 27px; font-weight: 600; line-height: 1.5; margin: 22px 0 7px; }
+.new-document-description { color: var(--secondary); font-size: 13px; margin: 0 0 27px; line-height: 1.8; }
+.new-document-label { display: block; color: var(--secondary); font-size: 12px; margin: 19px 0 9px; }
+.new-document-name { display: block; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 12px 13px; min-height: 47px; background: var(--paper); color: var(--text); font-size: 16px; }
+.new-document-name:focus { border-color: var(--accent); outline: 1px solid var(--accent); outline-offset: 0; }
+.new-document-formats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.new-document-formats button { border: 1px solid var(--line); border-radius: 9px; padding: 15px 12px; text-align: left; color: var(--secondary); background: var(--paper); }
+.new-document-formats button strong { display: block; color: var(--text); font-size: 14px; font-weight: 500; }
+.new-document-formats button span { display: block; font-size: 11px; line-height: 1.6; margin-top: 6px; }
+.new-document-formats button.chosen { border-color: var(--accent); background: var(--accent-wash); }
+.new-document-formats button.chosen strong { color: var(--accent); }
+.new-document-actions { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 29px; }
+.new-document-actions .open-document { min-height: 43px; padding: 10px 18px; font-size: 13px; letter-spacing: 0; gap: 8px; }
+.new-document-cancel { color: var(--secondary); font-size: 13px; padding: 12px 15px; border-radius: 7px; }
+.new-document-cancel:hover { background: var(--subtle); }
+.new-document-error { color: var(--accent); font-size: 12px; line-height: 1.7; margin: 15px 0 0; }
+
+@media (max-width: 800px) {
+  .editor-header { align-items: stretch; flex-direction: column; gap: 9px; padding: 12px 22px; }
+  .editor-header-actions { gap: 8px; }
+  .editor-save-status { margin-right: auto; }
+  .editor-save, .editor-read { min-height: 41px; }
+  .editor-formatting { padding: 6px 18px; gap: 3px; }
+  .editor-format-button { width: 38px; height: 40px; }
+  .editor-textarea { padding: 25px 23px 45px; }
+  .editor-footer { padding-inline: 22px; }
+}
+
+@media (max-width: 420px) {
+  .editor-header { padding-inline: 17px; }
+  .editor-formatting { padding-inline: 10px; gap: 0; }
+  .editor-format-hint { font-size: 10px; margin-right: 5px; }
+  .editor-format-button { width: 35px; }
+  .editor-textarea { padding: 22px 19px 35px; }
+  .editor-footer { padding-inline: 17px; font-size: 9px; }
+  .new-document-dialog { padding: 23px; }
+  .new-document-dialog h2 { font-size: 25px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-spinner { animation: none; }
+}
