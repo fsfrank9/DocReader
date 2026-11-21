@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown, ArrowUp, ArrowsIn, ArrowsOut, BookOpen, Check, Code,
   DotsThree, DownloadSimple, FileText, ListBullets, MagnifyingGlass,
@@ -278,6 +278,7 @@ export function App() {
   const setPreference = (key, value) => setPrefs((old) => ({ ...old, [key]: value }));
   const togglePanel = (next) => setPanel((current) => current === next ? null : next);
   const format = formatName(parsed?.format || record?.format);
+  const documentMarkup = useMemo(() => ({ __html: parsed?.html || '' }), [parsed?.html]);
   const readerStyle = { '--reading-size': `${prefs.fontSize}px`, '--reading-leading': prefs.lineHeight, '--reading-width': prefs.width === 'wide' ? '1040px' : '820px' };
 
   const outline = <>
@@ -344,7 +345,7 @@ export function App() {
         <div ref={scrollArea} className="document-scroll" onScroll={updateScroll}>
           {!activeId && ready ? <div className="empty-state"><img src="/icons/icon-192.png" alt="" /><span className="eyebrow">纸间 LEAF</span><h1>留一点时间，<br />给文字。</h1><p>打开一份文档，从这一页开始。</p><button className="open-document" onClick={openPicker}><Plus size={21} />打开文档</button><span className="supported-formats">TXT · Markdown · DOCX · HTML · JSON · CSV</span><span className="drop-hint">也可以将文件拖到这里</span></div> : error ? <div className="error-state"><FileText size={35} weight="light" /><h2>文档没有打开</h2><p>{error}</p><button className="open-document" onClick={openPicker}>打开其他文档</button></div> : loading || !parsed ? <div className="loading-state" role="status"><BookOpen size={30} weight="light" /><span>正在翻开这一页…</span></div> : <div className={`reading-page font-${prefs.font} ${source ? 'showing-source' : ''}`}>
             <header className="article-header"><h1>{parsed.title}</h1><div className="article-meta"><span className="format-badge">{source ? '原文' : format}</span><span className="meta-dot">·</span><span>{parsed.minutes} 分钟阅读</span>{record?.isSample && <span className="sample-label">示例文档</span>}</div></header>
-            <article ref={article} className={`article-content ${source ? 'source-content' : ''} format-${parsed.format}`} onClick={articleClick}>{source ? <pre className="source-text"><code>{parsed.text}</code></pre> : <div dangerouslySetInnerHTML={{ __html: parsed.html }} />}</article>
+            <article ref={article} className={`article-content ${source ? 'source-content' : ''} format-${parsed.format}`} onClick={articleClick}>{source ? <pre className="source-text"><code>{parsed.text}</code></pre> : <div dangerouslySetInnerHTML={documentMarkup} />}</article>
             <div className="article-end"><span /><BookOpen size={20} weight="light" /><span /><p>读到这里，刚刚好。</p></div>
           </div>}
         </div>
