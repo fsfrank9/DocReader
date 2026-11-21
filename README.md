@@ -10,6 +10,7 @@
 
 - TXT / TEXT / LOG 保留原始换行、空行和缩进。
 - Markdown（MD / MARKDOWN / MDOWN）展示标题、列表、引用、表格、代码高亮、任务列表、脚注和数学公式。
+- PDF 保留原始分页、文字、图片与表格；支持翻页、页码跳转、缩放、适合页宽、搜索与目录，并记住阅读位置。
 - DOCX 按标题、段落、列表、表格与内嵌图片重新排版；HTML / HTM 按文档结构阅读。
 - JSON 格式化高亮；CSV / TSV 展示为表格。
 - 自动识别常见文本编码，也可手动选择 UTF-8、UTF-16、GB18030、Big5 等编码。
@@ -36,7 +37,7 @@
 
 ## 本地开发
 
-使用 Node.js 22.12+，建议 Node.js 24 LTS。
+使用 Node.js 22.13+，建议 Node.js 24 LTS。
 
 ```bash
 npm ci
@@ -73,7 +74,7 @@ npm run deploy
 
 ## 技术
 
-React、Vite、Cloudflare Workers Static Assets、IndexedDB、Markdown-it、KaTeX、Highlight.js 与 PWA。文档解析在浏览器内完成。
+React、Vite、Cloudflare Workers Static Assets、IndexedDB、Markdown-it、KaTeX、Highlight.js、PDF.js 与 PWA。文档解析在浏览器内完成。
 
 ## 自动发布版本快照
 

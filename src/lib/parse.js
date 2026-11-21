@@ -7,7 +7,7 @@ import DOMPurify from 'dompurify';
 import { decodeText } from './encoding.js';
 
 export const SUPPORTED_EXTENSIONS = [
-  '.txt', '.md', '.markdown', '.mdown', '.html', '.htm', '.docx', '.json', '.csv', '.tsv', '.log', '.text',
+  '.txt', '.md', '.markdown', '.mdown', '.pdf', '.html', '.htm', '.docx', '.json', '.csv', '.tsv', '.log', '.text',
 ];
 
 const formatAliases = { markdown: 'md', mdown: 'md', htm: 'html', text: 'txt' };

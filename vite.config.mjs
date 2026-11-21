@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { VitePWA } from "vite-plugin-pwa";
+import { pdfAssets } from "./build/pdf-assets.mjs";
 
 // Cloudflare's Build Output v1 places the client bundle here.
 const clientOutput = ".cloudflare/output/v1/workers/default/assets";
@@ -17,6 +18,7 @@ export default defineConfig(({ command }) => ({
   },
   plugins: [
     react(),
+    pdfAssets(),
     ...(command === "build" ? [cloudflare()] : []),
     VitePWA({
       outDir: clientOutput,
@@ -42,7 +44,10 @@ export default defineConfig(({ command }) => ({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest,woff,woff2,ttf,wasm}"],
+        globPatterns: [
+          "**/*.{js,mjs,css,html,ico,png,gif,svg,webmanifest,woff,woff2,ttf,wasm,bcmap,pfb,icc}",
+          "pdfjs/**/LICENSE*",
+        ],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,

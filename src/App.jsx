@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown, ArrowUp, ArrowsIn, ArrowsOut, BookOpen, Check, Code,
   DotsThree, DownloadSimple, FileText, ListBullets, MagnifyingGlass,
-  FilePlus, PencilSimple, Plus, SidebarSimple, TextAa, Trash, X,
+  FilePdf, FilePlus, PencilSimple, Plus, SidebarSimple, TextAa, Trash, X,
 } from '@phosphor-icons/react';
 import { parseDocument, SUPPORTED_EXTENSIONS } from './lib/parse.js';
 import { ensureSamples, listDocuments, getDocument, saveDocument, removeDocument, updateDocumentMetadata, createTextDocument } from './lib/storage.js';
@@ -13,9 +13,10 @@ import { LibrarySidebar } from './components/LibrarySidebar.jsx';
 import { DocumentEditor, NewDocumentDialog } from './components/DocumentEditor.jsx';
 import { version } from '../package.json';
 
+const PdfReader = lazy(() => import('./components/PdfReader.jsx').then((module) => ({ default: module.PdfReader })));
 const defaults = { theme: 'paper', fontSize: 19, lineHeight: 1.9, font: 'serif', width: 'comfortable' };
 const encodings = [['auto', '自动识别'], ['utf-8', 'UTF-8'], ['gb18030', 'GB18030 / GBK'], ['big5', 'Big5 繁体'], ['utf-16le', 'UTF-16 LE'], ['utf-16be', 'UTF-16 BE'], ['windows-1252', 'Windows-1252']];
-const formatName = (format) => ({ markdown: 'MD', md: 'MD', txt: 'TXT', log: 'LOG', html: 'HTML', htm: 'HTML', docx: 'DOCX', json: 'JSON', csv: 'CSV', tsv: 'TSV' }[format] || format?.toUpperCase() || 'TXT');
+const formatName = (format) => ({ markdown: 'MD', md: 'MD', txt: 'TXT', log: 'LOG', html: 'HTML', htm: 'HTML', docx: 'DOCX', pdf: 'PDF', json: 'JSON', csv: 'CSV', tsv: 'TSV' }[format] || format?.toUpperCase() || 'TXT');
 const withoutExtension = (name) => name.replace(/\.[^.]+$/, '');
 const fileSize = (bytes) => bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const readProgress = (id) => Number(localStorage.getItem(`leaf.progress.${id}`) || 0);
@@ -66,6 +67,7 @@ export function App() {
   const openPicker = useCallback(() => picker.current?.click(), []);
   const editor = useDocumentEditor({ onSaved: refreshLibrary });
   const editing = Boolean(editor.draft);
+  const isPdf = record?.id === activeId && /\.pdf$/i.test(record?.name || '');
 
   useEffect(() => {
     localStorage.setItem('leaf.sidebar-collapsed', String(sidebarCollapsed));
@@ -106,7 +108,7 @@ export function App() {
 
   useEffect(() => {
     let current = true;
-    setSource(false); setError(''); setPanel(null); setQuery(''); setParsed(null);
+    setSource(false); setError(''); setPanel(null); setQuery(''); setSearchOpen(false); setParsed(null);
     if (!activeId) { setRecord(null); setLoading(false); return; }
     setLoading(true);
     localStorage.setItem('leaf.active', activeId);
@@ -116,6 +118,13 @@ export function App() {
 
   useEffect(() => {
     if (!record || record.id !== activeId) return;
+    if (isPdf) {
+      const title = withoutExtension(record.name);
+      setParsed(null); setLoading(false); setError('');
+      document.title = `${title} · 纸间 Leaf`;
+      updateDocumentMetadata(record.id, { title, format: 'pdf', openedAt: Date.now() }).then(refreshLibrary);
+      return;
+    }
     let current = true;
     let urls = [];
     setLoading(true);
@@ -129,7 +138,7 @@ export function App() {
       if (current) refreshLibrary();
     }).catch((e) => { if (current) { setError(`无法打开这份文档：${e.message}`); setLoading(false); } });
     return () => { current = false; urls.forEach(URL.revokeObjectURL); };
-  }, [record, activeId, refreshLibrary]);
+  }, [record, activeId, isPdf, refreshLibrary]);
 
   const updateScroll = useCallback(() => {
     const el = scrollArea.current;
@@ -195,20 +204,20 @@ export function App() {
   useEffect(() => {
     const keyboard = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'o') { event.preventDefault(); openPicker(); }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f' && activeId && !editing) { event.preventDefault(); setSearchOpen(true); searchInput.current?.focus(); }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f' && activeId && !editing && !isPdf) { event.preventDefault(); setSearchOpen(true); searchInput.current?.focus(); }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's' && editing) { event.preventDefault(); editor.flush().catch(() => {}); }
       if (event.key === 'Escape') { setPanel(null); setDrawer(null); setSearchOpen(false); setFocus(false); }
     };
     window.addEventListener('keydown', keyboard);
     return () => window.removeEventListener('keydown', keyboard);
-  }, [openPicker, activeId, editing, editor.flush]);
+  }, [openPicker, activeId, editing, isPdf, editor.flush]);
 
   async function importFiles(fileList) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
     const images = files.filter((file) => file.type.startsWith('image/')).map((file) => ({ name: file.webkitRelativePath || file.name, blob: file }));
     const readable = files.filter((file) => SUPPORTED_EXTENSIONS.includes(`.${file.name.split('.').pop().toLowerCase()}`));
-    if (!readable.length) { setToast('请选择 TXT、Markdown、DOCX、HTML、JSON 或 CSV 文档。'); return; }
+    if (!readable.length) { setToast('请选择 TXT、Markdown、PDF、DOCX、HTML、JSON 或 CSV 文档。'); return; }
     try {
       await editor.flush();
       editor.end();
@@ -245,10 +254,12 @@ export function App() {
       }
       const removed = await getDocument(id);
       const previousProgress = localStorage.getItem(`leaf.progress.${id}`);
+      const previousPdfPosition = localStorage.getItem(`leaf.pdf.${id}`);
       await removeDocument(id); localStorage.removeItem(`leaf.progress.${id}`);
+      localStorage.removeItem(`leaf.pdf.${id}`);
       const items = await listDocuments(); setDocuments(items);
       setActiveId((current) => current === id ? items[0]?.id || null : current);
-      setLastRemoved({ record: removed, progress: previousProgress, wasActive: id === activeId });
+      setLastRemoved({ record: removed, progress: previousProgress, pdfPosition: previousPdfPosition, wasActive: id === activeId });
       setPanel(null); setToast('文档已从书架移除');
     } catch (e) { setToast(`文档未能移除：${e.message}`); }
   }
@@ -257,6 +268,7 @@ export function App() {
     try {
       await saveDocument(lastRemoved.record);
       if (lastRemoved.progress !== null) localStorage.setItem(`leaf.progress.${lastRemoved.record.id}`, lastRemoved.progress);
+      if (lastRemoved.pdfPosition !== null) localStorage.setItem(`leaf.pdf.${lastRemoved.record.id}`, lastRemoved.pdfPosition);
       if (lastRemoved.wasActive) await chooseDocument(lastRemoved.record.id);
       await refreshLibrary();
       setLastRemoved(null); setToast('文档已放回书架');
@@ -305,6 +317,7 @@ export function App() {
   }
 
   async function beginEditing() {
+    if (isPdf) return;
     setPanel(null); setSearchOpen(false); setSource(false); setDrawer(null);
     try {
       if (parsed?.format === 'docx') {
@@ -410,25 +423,27 @@ export function App() {
       <header className="toolbar">
         <IconButton label={compact ? drawer === 'library' ? '关闭书架' : '打开书架' : sidebarCollapsed || focus ? '展开书架' : '收起侧栏'} className="sidebar-toggle" aria-controls="document-library" aria-expanded={compact ? drawer === 'library' : !sidebarCollapsed && !focus} onClick={toggleLibrary}><SidebarSimple size={22} weight="light" /></IconButton>
         {focus && <IconButton label="打开文档" onClick={openPicker}><Plus size={22} weight="light" /></IconButton>}
-        <div className="document-caption"><FileText size={21} weight="light" /><span>{editor.draft?.name || record?.name || '纸间 · Leaf'}</span></div>
+        <div className="document-caption">{isPdf ? <FilePdf size={21} weight="light" /> : <FileText size={21} weight="light" />}<span>{editor.draft?.name || record?.name || '纸间 · Leaf'}</span></div>
         <div className="toolbar-actions">
-          <button className={`toolbar-action edit-button ${editing ? 'is-active' : ''}`} aria-label={editing ? '返回阅读' : parsed?.format === 'docx' ? '创建可编辑副本' : '编辑文档'} title={editing ? '保存并返回阅读' : parsed?.format === 'docx' ? '创建可编辑的 TXT 副本' : '编辑文档'} disabled={!record || loading || record.id !== activeId} onClick={editing ? finishEditing : beginEditing}>{editing ? <BookOpen size={21} weight="light" /> : <PencilSimple size={21} weight="light" />}<span>{editing ? '阅读' : '编辑'}</span></button>
+          {!isPdf && <button className={`toolbar-action edit-button ${editing ? 'is-active' : ''}`} aria-label={editing ? '返回阅读' : parsed?.format === 'docx' ? '创建可编辑副本' : '编辑文档'} title={editing ? '保存并返回阅读' : parsed?.format === 'docx' ? '创建可编辑的 TXT 副本' : '编辑文档'} disabled={!record || loading || record.id !== activeId} onClick={editing ? finishEditing : beginEditing}>{editing ? <BookOpen size={21} weight="light" /> : <PencilSimple size={21} weight="light" />}<span>{editing ? '阅读' : '编辑'}</span></button>}
           {!editing && <>
+          {!isPdf && <>
           <button className={`toolbar-action ${searchOpen ? 'is-active' : ''}`} title="查找文档内容 · Ctrl / ⌘ F" aria-label="查找文档内容" disabled={!parsed} onClick={() => { setSearchOpen((v) => !v); setPanel(null); }}><MagnifyingGlass size={21} weight="light" /><span>搜索</span></button>
           <span className="toolbar-divider" />
           <button className={`toolbar-action appearance-button ${panel === 'appearance' ? 'is-active' : ''}`} aria-label="阅读设置" title="阅读设置" aria-expanded={panel === 'appearance'} onClick={() => togglePanel('appearance')}><TextAa size={25} weight="light" /></button>
           <span className="toolbar-divider desktop-divider" />
+          </>}
           <button className={`toolbar-action focus-button ${focus ? 'is-active' : ''}`} aria-label={focus ? '退出专注' : '专注阅读'} title="专注阅读 · Esc 退出" onClick={() => { setFocus((v) => !v); setPanel(null); }}>{focus ? <ArrowsIn size={20} weight="light" /> : <ArrowsOut size={20} weight="light" />}<span>{focus ? '退出' : '专注'}</span></button>
-          <IconButton label="打开目录" className="mobile-outline" onClick={() => { setDrawer('outline'); setPanel(null); }}><ListBullets size={22} weight="light" /></IconButton>
+          {!isPdf && <IconButton label="打开目录" className="mobile-outline" onClick={() => { setDrawer('outline'); setPanel(null); }}><ListBullets size={22} weight="light" /></IconButton>}
           </>}
           <IconButton label="文档选项" active={panel === 'more'} onClick={() => togglePanel('more')}><DotsThree size={24} /></IconButton>
         </div>
       </header>
 
-      {searchOpen && <div className="search-bar"><MagnifyingGlass size={19} /><input ref={searchInput} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); moveMatch(e.shiftKey ? -1 : 1); } }} placeholder="在文档中查找…" aria-label="查找内容" /><span className="search-count" aria-live="polite">{query ? matches ? `${matchIndex + 1} / ${matches}` : '无匹配' : ''}</span><IconButton label="上一个匹配" disabled={!matches} onClick={() => moveMatch(-1)}><ArrowUp size={18} /></IconButton><IconButton label="下一个匹配" disabled={!matches} onClick={() => moveMatch(1)}><ArrowDown size={18} /></IconButton><IconButton label="关闭查找" onClick={() => setSearchOpen(false)}><X size={18} /></IconButton></div>}
+      {searchOpen && !isPdf && <div className="search-bar"><MagnifyingGlass size={19} /><input ref={searchInput} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); moveMatch(e.shiftKey ? -1 : 1); } }} placeholder="在文档中查找…" aria-label="查找内容" /><span className="search-count" aria-live="polite">{query ? matches ? `${matchIndex + 1} / ${matches}` : '无匹配' : ''}</span><IconButton label="上一个匹配" disabled={!matches} onClick={() => moveMatch(-1)}><ArrowUp size={18} /></IconButton><IconButton label="下一个匹配" disabled={!matches} onClick={() => moveMatch(1)}><ArrowDown size={18} /></IconButton><IconButton label="关闭查找" onClick={() => setSearchOpen(false)}><X size={18} /></IconButton></div>}
 
       {panel && <button className="popover-backdrop" aria-label="关闭菜单" onClick={() => setPanel(null)} />}
-      {panel === 'appearance' && <section className="popover appearance-panel" role="dialog" aria-label="阅读设置">
+      {panel === 'appearance' && !isPdf && <section className="popover appearance-panel" role="dialog" aria-label="阅读设置">
         <div className="popover-heading"><span>让阅读更合心意</span><IconButton label="关闭阅读设置" onClick={() => setPanel(null)}><X size={17} /></IconButton></div>
         <div className="setting-row"><label htmlFor="font-size">字号</label><div className="stepper"><button aria-label="减小字号" disabled={prefs.fontSize <= 14} onClick={() => setPreference('fontSize', prefs.fontSize - 1)}>−</button><output id="font-size">{prefs.fontSize}</output><button aria-label="增大字号" disabled={prefs.fontSize >= 30} onClick={() => setPreference('fontSize', prefs.fontSize + 1)}>+</button></div></div>
         <div className="setting-row"><span>字体</span><div className="segmented">{[['serif', '宋体'], ['sans', '黑体'], ['mono', '等宽']].map(([key, label]) => <button key={key} className={prefs.font === key ? 'chosen' : ''} onClick={() => setPreference('font', key)}>{label}</button>)}</div></div>
@@ -441,11 +456,11 @@ export function App() {
       {panel === 'more' && <section className="popover more-panel" role="menu" aria-label="文档选项">
         <button role="menuitem" onClick={openNewDocument}><FilePlus size={19} />新建文档</button>
         {record && <>
-          {!editing && <button role="menuitem" onClick={() => { setSource((value) => !value); setPanel(null); }}><Code size={19} />{source ? '阅读视图' : '查看原文'}</button>}
+          {!editing && !isPdf && <button role="menuitem" onClick={() => { setSource((value) => !value); setPanel(null); }}><Code size={19} />{source ? '阅读视图' : '查看原文'}</button>}
           <button role="menuitem" onClick={downloadDocument}><DownloadSimple size={19} />下载文档</button>
           <div className="menu-divider" />
-          {!editing && parsed?.format !== 'docx' && <label className="encoding-control">文本编码<select value={record.encoding || 'auto'} onChange={(event) => changeEncoding(event.target.value)}>{encodings.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>}
-          <div className="document-details"><span>{format} · {fileSize(record.size || record.blob.size)}</span><span>{editing ? 'UTF-8' : parsed?.encoding && parsed.encoding !== 'binary' ? parsed.encoding.toUpperCase() : ''}</span></div>
+          {!editing && !isPdf && parsed?.format !== 'docx' && <label className="encoding-control">文本编码<select value={record.encoding || 'auto'} onChange={(event) => changeEncoding(event.target.value)}>{encodings.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>}
+          <div className="document-details"><span>{format} · {fileSize(record.size || record.blob.size)}</span><span>{isPdf ? '' : editing ? 'UTF-8' : parsed?.encoding && parsed.encoding !== 'binary' ? parsed.encoding.toUpperCase() : ''}</span></div>
           <div className="menu-divider" />
         </>}
         <button role="menuitem" onClick={installApp}><DownloadSimple size={19} />安装到设备</button>
@@ -454,10 +469,10 @@ export function App() {
 
       {panel === 'install' && <section className="popover install-panel" role="dialog" aria-label="安装纸间"><div className="popover-heading"><span>把纸间放在手边</span><IconButton label="关闭安装说明" onClick={() => setPanel(null)}><X size={18} /></IconButton></div><img src="/icons/icon-192.png" className="install-icon" alt="纸间应用图标" /><h3>像 App 一样打开</h3><p><strong>iPhone / iPad</strong><br />在 Safari 中打开，轻点「分享」，选择「添加到主屏幕」。</p><p><strong>MacBook</strong><br />Safari 菜单「文件」→「添加到程序坞」。</p><p><strong>Windows</strong><br />在 Edge 或 Chrome 地址栏选择「安装应用」。</p><span className="install-note">纸间 {version} · 文档和阅读进度保存在当前设备。</span></section>}
 
-      {editing ? <DocumentEditor key={editor.draft.id} draft={editor.draft} status={editor.status} error={editor.error} onChange={editor.change} onSave={() => editor.flush().catch(() => {})} onDone={finishEditing} /> : <>
+      {editing ? <DocumentEditor key={editor.draft.id} draft={editor.draft} status={editor.status} error={editor.error} onChange={editor.change} onSave={() => editor.flush().catch(() => {})} onDone={finishEditing} /> : isPdf ? <Suspense fallback={<div className="loading-state" role="status"><BookOpen size={30} weight="light" /><span>正在打开 PDF…</span></div>}><PdfReader key={record.id} record={record} onToast={setToast} /></Suspense> : <>
       <div className={`reading-layout ${source ? 'source-layout' : ''}`}>
         <div ref={scrollArea} className="document-scroll" onScroll={updateScroll}>
-          {!activeId && ready ? <div className="empty-state"><img src="/icons/icon-192.png" alt="" /><span className="eyebrow">纸间 LEAF</span><h1>留一点时间，<br />给文字。</h1><p>打开一份文档，或写下新的一页。</p><div className="empty-actions"><button className="open-document" onClick={openPicker}><Plus size={21} />打开文档</button><button className="new-document" onClick={openNewDocument}><FilePlus size={21} />新建文档</button></div><span className="supported-formats">TXT · Markdown · DOCX · HTML · JSON · CSV</span><span className="drop-hint">也可以将文件拖到这里</span></div> : error ? <div className="error-state"><FileText size={35} weight="light" /><h2>文档没有打开</h2><p>{error}</p><button className="open-document" onClick={openPicker}>打开其他文档</button></div> : loading || !parsed ? <div className="loading-state" role="status"><BookOpen size={30} weight="light" /><span>正在翻开这一页…</span></div> : <div className={`reading-page font-${prefs.font} ${source ? 'showing-source' : ''}`}>
+          {!activeId && ready ? <div className="empty-state"><img src="/icons/icon-192.png" alt="" /><span className="eyebrow">纸间 LEAF</span><h1>留一点时间，<br />给文字。</h1><p>打开一份文档，或写下新的一页。</p><div className="empty-actions"><button className="open-document" onClick={openPicker}><Plus size={21} />打开文档</button><button className="new-document" onClick={openNewDocument}><FilePlus size={21} />新建文档</button></div><span className="supported-formats">TXT · Markdown · PDF · DOCX · HTML · JSON · CSV</span><span className="drop-hint">也可以将文件拖到这里</span></div> : error ? <div className="error-state"><FileText size={35} weight="light" /><h2>文档没有打开</h2><p>{error}</p><button className="open-document" onClick={openPicker}>打开其他文档</button></div> : loading || !parsed ? <div className="loading-state" role="status"><BookOpen size={30} weight="light" /><span>正在翻开这一页…</span></div> : <div className={`reading-page font-${prefs.font} ${source ? 'showing-source' : ''}`}>
             <header className="article-header"><h1>{parsed.title}</h1><div className="article-meta"><span className="format-badge">{source ? '原文' : format}</span><span className="meta-dot">·</span><span>{parsed.minutes} 分钟阅读</span>{record?.isSample && <span className="sample-label">示例文档</span>}</div></header>
             <article ref={article} className={`article-content ${source ? 'source-content' : ''} format-${parsed.format}`} onClick={articleClick}>{source ? <pre className="source-text"><code>{parsed.text}</code></pre> : <div dangerouslySetInnerHTML={documentMarkup} />}</article>
             <div className="article-end"><span /><BookOpen size={20} weight="light" /><span /><p>读到这里，刚刚好。</p></div>

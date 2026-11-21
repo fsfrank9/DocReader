@@ -1,6 +1,6 @@
 {
   "name": "docreader",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,6 +22,7 @@
     "markdown-it": "15.0.3",
     "markdown-it-footnote": "4.0.0",
     "papaparse": "5.7.1",
+    "pdfjs-dist": "6.5.438",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
@@ -33,6 +34,6 @@
     "vite-plugin-pwa": "2.0.0"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.13.0"
   }
 }

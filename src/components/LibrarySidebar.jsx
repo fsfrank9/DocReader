@@ -1,5 +1,5 @@
 import {
-  BookOpen, CaretLeft, DownloadSimple, FilePlus, FileText,
+  BookOpen, CaretLeft, DownloadSimple, FilePdf, FilePlus, FileText,
   MagnifyingGlass, Moon, Plus, Sun, Trash, X,
 } from '@phosphor-icons/react';
 
@@ -29,7 +29,7 @@ export function LibrarySidebar({
 
     <nav className="document-list" aria-label="最近阅读">
       {filtered.map((item) => <div className={`document-row ${item.id === activeId ? 'selected' : ''}`} key={item.id}>
-        <button type="button" className="document-open" onClick={() => onChoose(item.id)} title={item.name} aria-current={item.id === activeId ? 'page' : undefined}><FileText size={21} weight="light" /><span className="document-name">{item.name}</span></button>
+        <button type="button" className="document-open" onClick={() => onChoose(item.id)} title={item.name} aria-current={item.id === activeId ? 'page' : undefined}>{item.format === 'pdf' ? <FilePdf size={21} weight="light" /> : <FileText size={21} weight="light" />}<span className="document-name">{item.name}</span></button>
         <button type="button" className="document-remove" onClick={() => onRemove(item.id)} title={`从书架移除 ${item.name}`} aria-label={`从书架移除 ${item.name}`}><Trash size={17} weight="light" /></button>
       </div>)}
       {ready && !filtered.length && <div className="library-empty">{libraryQuery ? '没有找到这份文档' : '书架还空着，打开或新建一份文档吧。'}</div>}
